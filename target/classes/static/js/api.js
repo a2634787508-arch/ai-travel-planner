@@ -1,7 +1,7 @@
 // 创建axios实例
 const request = axios.create({
     baseURL: '',
-    timeout: 10000,
+    timeout: 50000,
     headers: {
         'Content-Type': 'application/json'
     }
