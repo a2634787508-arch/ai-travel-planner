@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.travelai.mapper.ExpenseMapper">
+    <resultMap id="ExpenseResultMap" type="com.travelai.entity.Expense">
+        <id property="id" column="id"/>
+        <result property="travelPlanId" column="travel_plan_id"/>
+        <result property="category" column="category"/>
+        <result property="itemName" column="item_name"/>
+        <result property="amount" column="amount"/>
+        <result property="note" column="note"/>
+        <result property="createdTime" column="created_time"/>
+    </resultMap>
+
+    <select id="findByTravelPlanId" resultMap="ExpenseResultMap">
+        SELECT * FROM expenses WHERE travel_plan_id = #{travelPlanId}
+    </select>
+
+    <select id="findById" resultMap="ExpenseResultMap">
+        SELECT * FROM expenses WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO expenses (travel_plan_id, category, item_name, amount, note)
+        VALUES (#{travelPlanId}, #{category}, #{itemName}, #{amount}, #{note})
+    </insert>
+
+    <update id="update">
+        UPDATE expenses 
+        SET category = #{category}, 
+            item_name = #{itemName}, 
+            amount = #{amount}, 
+            note = #{note}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM expenses WHERE id = #{id}
+    </delete>
+</mapper>

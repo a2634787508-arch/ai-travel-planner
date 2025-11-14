@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.travelai.mapper.TravelPlanMapper">
+    <resultMap id="TravelPlanResultMap" type="com.travelai.entity.TravelPlan">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="destination" column="destination"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="totalBudget" column="total_budget"/>
+        <result property="peopleCount" column="people_count"/>
+        <result property="preferences" column="preferences"/>
+        <result property="generatedItinerary" column="generated_itinerary"/>
+        <result property="createdTime" column="created_time"/>
+    </resultMap>
+
+    <select id="findByUserId" resultMap="TravelPlanResultMap">
+        SELECT * FROM travel_plans WHERE user_id = #{userId}
+    </select>
+
+    <select id="findById" resultMap="TravelPlanResultMap">
+        SELECT * FROM travel_plans WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plans (user_id, destination, start_date, end_date, total_budget, people_count, preferences, generated_itinerary)
+        VALUES (#{userId}, #{destination}, #{startDate}, #{endDate}, #{totalBudget}, #{peopleCount}, #{preferences}, #{generatedItinerary})
+    </insert>
+
+    <update id="update">
+        UPDATE travel_plans 
+        SET destination = #{destination}, 
+            start_date = #{startDate}, 
+            end_date = #{endDate}, 
+            total_budget = #{totalBudget}, 
+            people_count = #{peopleCount}, 
+            preferences = #{preferences}, 
+            generated_itinerary = #{generatedItinerary}
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM travel_plans WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+</mapper>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行程详情 - 智能旅行规划系统</title>
+
+    <!-- 引入Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入Element Plus -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- 引入Element Plus组件库 -->
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <!-- 引入Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="css/trip-detail.css">
+</head>
+
+<body>
+    <div class="container" id="app">
+        <!-- 页面头部 -->
+        <div class="header">
+            <button class="back-button" @click="goBack">
+                <i class="fas fa-arrow-left"></i> 返回
+            </button>
+            <h1>行程详情</h1>
+            <div class="subtitle">查看您的完整旅行规划</div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="content">
+            <!-- 加载状态 -->
+            <div v-if="loading" class="loading-container">
+                <el-loading-directive></el-loading-directive>
+                <p style="margin-top: 20px; color: #666;">正在加载行程详情...</p>
+            </div>
+
+            <!-- 错误状态 -->
+            <div v-else-if="error" class="error-container">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="error-message">{{ error }}</div>
+                <el-button type="primary" @click="loadTripDetail">重新加载</el-button>
+            </div>
+
+            <!-- 行程详情内容 -->
+            <div v-else-if="tripData">
+                <!-- 基本信息 -->
+                <div class="trip-info">
+                    <h2>{{ tripData.destination }}</h2>
+                    <div class="trip-details">
+                        <div class="detail-item">
+                            <div class="label">开始日期</div>
+                            <div class="value">{{ formatDate(tripData.startDate) }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">结束日期</div>
+                            <div class="value">{{ formatDate(tripData.endDate) }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">预算</div>
+                            <div class="value">¥{{ tripData.totalBudget }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">人数</div>
+                            <div class="value">{{ tripData.peopleCount }}人</div>
+                        </div>
+                    </div>
+                    <div v-if="tripData.preferences" class="detail-item" style="margin-top: 20px;">
+                        <div class="label">旅行偏好</div>
+                        <div class="value">{{ tripData.preferences }}</div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="action-buttons">
+                    <button class="action-button edit-button" @click="editTrip">
+                        <i class="fas fa-edit"></i> 编辑行程
+                    </button>
+                    <button class="action-button delete-button" @click="deleteTrip">
+                        <i class="fas fa-trash"></i> 删除行程
+                    </button>
+                </div>
+
+                <!-- 详细行程安排 -->
+                <div v-if="itineraryData" class="itinerary-section">
+                    <h3>详细行程安排</h3>
+                    <div v-for="(day, index) in itineraryData.days" :key="index" class="day-card">
+                        <div class="day-header">
+                            第{{ day.day }}天 - {{ day.date }} - {{ day.title }}
+                        </div>
+                        <div class="day-content">
+                            <div v-for="(item, itemIndex) in day.schedule" :key="itemIndex" class="schedule-item">
+                                <div class="schedule-time">{{ item.time }}</div>
+                                <div class="schedule-details">
+                                    <div class="schedule-activity">{{ item.activity }}</div>
+                                    <div class="schedule-location">
+                                        <i class="fas fa-map-marker-alt"></i> {{ item.location }}
+                                    </div>
+                                    <div class="schedule-description">{{ item.description }}</div>
+                                    <div class="schedule-cost">
+                                        <i class="fas fa-yen-sign"></i> {{ item.cost }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { travelPlanApi, checkLogin, redirectWithToken } from './js/api.js';
+        const { ElMessage, ElMessageBox } = ElementPlus;
+        const { createApp, ref, onMounted } = Vue;
+
+        // Vue 应用实例
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const error = ref('');
+                const tripData = ref(null);
+                const itineraryData = ref(null);
+                const tripId = ref(null);
+
+                // 格式化日期
+                const formatDate = (dateString) => {
+                    if (!dateString) return '';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                };
+
+                // 加载行程详情
+                const loadTripDetail = async () => {
+                    loading.value = true;
+                    error.value = '';
+                    tripId.value = new URLSearchParams(window.location.search).get('id');
+                    // 调用API获取行程详情
+                    travelPlanApi.getTravelPlanById(tripId.value).then(data => {
+                        itineraryData.value = JSON.parse(data.generatedItinerary).plan;
+                        console.log('解析后的行程安排:', itineraryData.value);
+                        tripData.value = data;
+                        console.log('行程详情数据:', data);
+                    }).catch(err => {
+                        console.error('加载行程详情失败:', err);
+                        error.value = err.message || '加载行程详情失败';
+                        ElMessage.error('加载行程详情失败');
+                    }).finally(() => loading.value = false)
+
+                    // try {
+                    //     loading.value = true;
+                    //     error.value = '';
+
+                    //     const id = getTripIdFromUrl();
+                    //     if (!id) {
+                    //         error.value = '未找到行程ID';
+                    //         return;
+                    //     }
+
+                    //     tripId.value = id;
+
+                    //     // 调用API获取行程详情
+                    //     const data = await travelPlanApi.getTravelPlanById(id);
+                    //     // 在控制台输出行程数据
+                    //     console.log('行程详情数据:', data);
+
+                    //     tripData.value = data;
+
+                    //     // 解析generatedItinerary JSON
+                    //     if (data.generatedItinerary) {
+                    //         try {
+                    //             itineraryData.value = JSON.parse(data.generatedItinerary).plan;
+                    //             console.log('解析后的行程安排:', itineraryData.value);
+                    //         } catch (parseError) {
+                    //             console.error('解析行程安排失败:', parseError);
+                    //             ElMessage.warning('行程安排数据格式错误');
+                    //         }
+                    //     }
+
+                    // } catch (err) {
+                    //     console.error('加载行程详情失败:', err);
+                    //     error.value = err.message || '加载行程详情失败';
+                    //     ElMessage.error('加载行程详情失败');
+                    // } finally {
+                    //     loading.value = false;
+                    // }
+                };
+
+                // 返回上一页
+                const goBack = () => {
+                    redirectWithToken('trip-management.html');
+                };
+
+                // 编辑行程
+                const editTrip = () => {
+                    if (!tripId.value) return;
+                    // 跳转到编辑页面，这里可以创建一个编辑页面或使用模态框
+                    ElMessage.info('编辑功能开发中...');
+                    // 示例：window.location.href = `edit-trip.html?id=${tripId.value}`;
+                };
+
+                // 删除行程
+                const deleteTrip = async () => {
+                    if (!tripId.value) return;
+
+                    //try {
+                    ElMessageBox.confirm(
+                        '确定要删除这个行程吗？此操作不可恢复。',
+                        '确认删除',
+                        {
+                            confirmButtonText: '确定删除',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    )
+                        .then(() => travelPlanApi.deleteTravelPlan(tripId.value))
+                        .then(() => {
+                            ElMessage.success('行程删除成功');
+                            redirectWithToken('trip-management.html');
+                        }).catch(err => {
+                            if (err !== 'cancel') {
+                                console.error('删除行程失败:', err);
+                                ElMessage.error('删除行程失败');
+                            }
+                        })
+
+                    // await ElMessageBox.confirm(
+                    //     '确定要删除这个行程吗？此操作不可恢复。',
+                    //     '确认删除',
+                    //     {
+                    //         confirmButtonText: '确定删除',
+                    //         cancelButtonText: '取消',
+                    //         type: 'warning',
+                    //     }
+                    // );
+
+                    // await travelPlanApi.deleteTravelPlan(tripId.value);
+                    // ElMessage.success('行程删除成功');
+
+                    // // 返回行程管理页面
+                    // setTimeout(() => {
+                    //     redirectWithToken('trip-management.html');
+                    // }, 1500);
+
+                    // } catch (err) {
+                    //     if (err !== 'cancel') {
+                    //         console.error('删除行程失败:', err);
+                    //         ElMessage.error('删除行程失败');
+                    //     }
+                    // }
+                };
+
+                // 页面加载时执行
+                onMounted(() => {
+                    // 检查登录状态
+                    if (!checkLogin()) {
+                        return;
+                    }
+
+                    // 加载行程详情
+                    loadTripDetail();
+                });
+
+                return {
+                    loading,
+                    error,
+                    tripData,
+                    itineraryData,
+                    formatDate,
+                    loadTripDetail,
+                    goBack,
+                    editTrip,
+                    deleteTrip
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+
+</html>
